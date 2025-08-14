@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroMonitor - Patient Care Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        violet: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                        },
+                        indigo: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#5b21b6',
+                            700: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-violet-50 to-indigo-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center">
+                <i data-lucide="brain" class="text-violet-600 mr-3 w-8 h-8"></i>
+                <h1 class="text-2xl font-bold text-gray-800">NeuroMonitor</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-6 pb-20">
+        <!-- Patient Dashboard -->
+        <div id="patient-dashboard" class="space-y-6">
+            <!-- Medication Adherence Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <i data-lucide="pill" class="text-violet-600 mr-3 w-6 h-6"></i>
+                    <h2 class="text-xl font-semibold text-gray-800">Medication Adherence</h2>
+                </div>
+                <div id="medications-list" class="space-y-4">
+                    <!-- Medications will be populated here -->
+                </div>
+                <button id="add-medication-btn" class="w-full mt-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg px-4 py-2 flex items-center justify-center transition-colors">
+                    <i data-lucide="plus" class="mr-2 w-5 h-5"></i>
+                    Add New Medication
+                </button>
+            </div>
+
+            <!-- Symptom Log Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <i data-lucide="activity" class="text-violet-600 mr-3 w-6 h-6"></i>
+                    <h2 class="text-xl font-semibold text-gray-800">My Symptom Log</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-2">Date</th>
+                                <th class="text-left py-2">Symptom</th>
+                                <th class="text-left py-2">Severity</th>
+                                <th class="text-left py-2">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="symptoms-table">
+                            <!-- Symptoms will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                <button id="add-symptom-btn" class="w-full mt-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg px-4 py-2 flex items-center justify-center transition-colors">
+                    <i data-lucide="plus" class="mr-2 w-5 h-5"></i>
+                    Log New Symptom
+                </button>
+            </div>
+
+            <!-- Upcoming Appointment Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <i data-lucide="calendar" class="text-violet-600 mr-3 w-6 h-6"></i>
+                    <h2 class="text-xl font-semibold text-gray-800">Upcoming Appointment</h2>
+                </div>
+                <div class="bg-violet-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold text-violet-800">Next Appointment</p>
+                            <p class="text-violet-600">2024-01-20 at 10:30 AM</p>
+                        </div>
+                        <button id="view-appointment-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-2 flex items-center transition-colors">
+                            <i data-lucide="eye" class="mr-2 w-4 h-4"></i>
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Educational Resources -->
+        <div id="resources-dashboard" class="space-y-6 hidden">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <i data-lucide="book-open" class="text-violet-600 mr-3 w-6 h-6"></i>
+                    <h2 class="text-xl font-semibold text-gray-800">Educational Resources</h2>
+                </div>
+                <div id="resources-content">
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Loading resources...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Doctor Dashboard -->
+        <div id="doctor-dashboard" class="space-y-6 hidden">
+            <!-- Patient Header -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <i data-lucide="user" class="text-violet-600 mr-3 w-6 h-6"></i>
+                    <h2 class="text-xl font-semibold text-gray-800">Patient Overview</h2>
+                </div>
+                <div class="bg-indigo-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-indigo-800">John Smith</h3>
+                    <p class="text-indigo-600">Parkinson's Disease</p>
+                    <p class="text-sm text-indigo-500">Patient ID: PD-2024-001</p>
+                </div>
+            </div>
+
+            <!-- AI Insights -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <i data-lucide="brain" class="text-violet-600 mr-3 w-6 h-6"></i>
+                    <h2 class="text-xl font-semibold text-gray-800">AI-Powered Patient Insights</h2>
+                </div>
+                <div id="ai-insights-content">
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Analyzing patient data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex justify-around py-2">
+                <button id="nav-patient" class="nav-btn flex flex-col items-center py-2 px-4 rounded-lg transition-colors text-violet-600 bg-violet-50">
+                    <i data-lucide="user" class="w-6 h-6"></i>
+                    <span class="text-xs mt-1">Patient</span>
+                </button>
+                <button id="nav-resources" class="nav-btn flex flex-col items-center py-2 px-4 rounded-lg transition-colors text-gray-600">
+                    <i data-lucide="book-open" class="w-6 h-6"></i>
+                    <span class="text-xs mt-1">Resources</span>
+                </button>
+                <button id="nav-doctor" class="nav-btn flex flex-col items-center py-2 px-4 rounded-lg transition-colors text-gray-600">
+                    <i data-lucide="stethoscope" class="w-6 h-6"></i>
+                    <span class="text-xs mt-1">Doctor</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h2 id="modal-title" class="text-xl font-semibold text-gray-800"></h2>
+                <button id="modal-close" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="p-6">
+                <!-- Modal content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Application state
+        let currentTab = 'patient';
+        let medications = [
+            { id: 1, name: 'Levodopa', dose: '100mg', frequency: '3x daily', lastTaken: '2024-01-15 08:00' },
+            { id: 2, name: 'Carbidopa', dose: '25mg', frequency: '3x daily', lastTaken: '2024-01-15 08:00' },
+            { id: 3, name: 'Ropinirole', dose: '2mg', frequency: '2x daily', lastTaken: '2024-01-14 20:00' }
+        ];
+
+        let symptoms = [
+            { id: 1, date: '2024-01-15', symptom: 'Tremor', severity: 3, notes: 'Mild tremor in left hand' },
+            { id: 2, date: '2024-01-14', symptom: 'Stiffness', severity: 4, notes: 'Morning stiffness lasted 2 hours' },
+            { id: 3, date: '2024-01-13', symptom: 'Fatigue', severity: 2, notes: 'Felt tired after lunch' }
+        ];
+
+        let editingMedication = null;
+        let chart = null;
+
+        // Utility functions
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function hideModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+            editingMedication = null;
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Hide all dashboards
+            document.getElementById('patient-dashboard').classList.add('hidden');
+            document.getElementById('resources-dashboard').classList.add('hidden');
+            document.getElementById('doctor-dashboard').classList.add('hidden');
+            
+            // Show selected dashboard
+            document.getElementById(`${tab}-dashboard`).classList.remove('hidden');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-violet-600', 'bg-violet-50');
+                btn.classList.add('text-gray-600');
+            });
+            
+            document.getElementById(`nav-${tab}`).classList.add('text-violet-600', 'bg-violet-50');
+            document.getElementById(`nav-${tab}`).classList.remove('text-gray-600');
+
+            // Load content based on tab
+            if (tab === 'resources') {
+                loadEducationalResources();
+            } else if (tab === 'doctor') {
+                loadDoctorInsights();
+            }
+        }
+
+        function renderMedications() {
+            const container = document.getElementById('medications-list');
+            container.innerHTML = medications.map(med => `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">${med.name}</h3>
+                            <p class="text-sm text-gray-600">${med.dose} • ${med.frequency}</p>
+                            <p class="text-xs text-gray-500">Last taken: ${med.lastTaken}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="logTaken(${med.id})" class="bg-green-500 hover:bg-green-600 text-white text-sm px-3 py-1.5 rounded-lg flex items-center transition-colors">
+                                <i data-lucide="check" class="mr-1 w-4 h-4"></i>
+                                Log Taken
+                            </button>
+                            <button onclick="editMedication(${med.id})" class="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm px-3 py-1.5 rounded-lg transition-colors">
+                                <i data-lucide="edit" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="removeMedication(${med.id})" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderSymptoms() {
+            const tbody = document.getElementById('symptoms-table');
+            tbody.innerHTML = symptoms.map(symptom => `
+                <tr class="border-b">
+                    <td class="py-2">${symptom.date}</td>
+                    <td class="py-2">${symptom.symptom}</td>
+                    <td class="py-2">
+                        <span class="px-2 py-1 rounded text-xs ${
+                            symptom.severity <= 2 ? 'bg-green-100 text-green-800' :
+                            symptom.severity <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                        }">
+                            ${symptom.severity}/5
+                        </span>
+                    </td>
+                    <td class="py-2">${symptom.notes}</td>
+                </tr>
+            `).join('');
+        }
+
+        function logTaken(id) {
+            const now = new Date().toLocaleString();
+            medications = medications.map(med => 
+                med.id === id ? { ...med, lastTaken: now } : med
+            );
+            renderMedications();
+        }
+
+        function editMedication(id) {
+            editingMedication = medications.find(med => med.id === id);
+            showMedicationModal();
+        }
+
+        function removeMedication(id) {
+            medications = medications.filter(med => med.id !== id);
+            renderMedications();
+        }
+
+        function showMedicationModal() {
+            const isEditing = editingMedication !== null;
+            const title = isEditing ? 'Edit Medication' : 'Add New Medication';
+            const med = editingMedication || { name: '', dose: '', frequency: '' };
+            
+            const content = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Medication Name</label>
+                        <input type="text" id="med-name" value="${med.name}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500" placeholder="e.g., Levodopa">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Dose</label>
+                        <input type="text" id="med-dose" value="${med.dose}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500" placeholder="e.g., 100mg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                        <input type="text" id="med-frequency" value="${med.frequency}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500" placeholder="e.g., 3x daily">
+                    </div>
+                    <div class="flex space-x-3 pt-4">
+                        <button onclick="saveMedication()" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg px-4 py-2 transition-colors">
+                            ${isEditing ? 'Update' : 'Add'} Medication
+                        </button>
+                        <button onclick="hideModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-2 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            showModal(title, content);
+        }
+
+        function saveMedication() {
+            const name = document.getElementById('med-name').value;
+            const dose = document.getElementById('med-dose').value;
+            const frequency = document.getElementById('med-frequency').value;
+            
+            if (name && dose && frequency) {
+                if (editingMedication) {
+                    medications = medications.map(med => 
+                        med.id === editingMedication.id 
+                            ? { ...med, name, dose, frequency }
+                            : med
+                    );
+                } else {
+                    medications.push({
+                        id: Date.now(),
+                        name,
+                        dose,
+                        frequency,
+                        lastTaken: 'Not taken yet'
+                    });
+                }
+                renderMedications();
+                hideModal();
+            }
+        }
+
+        function showSymptomModal() {
+            const content = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Symptom</label>
+                        <input type="text" id="symptom-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500" placeholder="e.g., Tremor, Stiffness, Fatigue">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Severity (1-5)</label>
+                        <select id="symptom-severity" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500">
+                            <option value="1">1 - Very Mild</option>
+                            <option value="2">2 - Mild</option>
+                            <option value="3">3 - Moderate</option>
+                            <option value="4">4 - Severe</option>
+                            <option value="5">5 - Very Severe</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <textarea id="symptom-notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500" placeholder="Additional details about the symptom..."></textarea>
+                    </div>
+                    <div class="flex space-x-3 pt-4">
+                        <button onclick="saveSymptom()" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg px-4 py-2 transition-colors">
+                            Log Symptom
+                        </button>
+                        <button onclick="hideModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-2 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            showModal('Log New Symptom', content);
+        }
+
+        function saveSymptom() {
+            const symptom = document.getElementById('symptom-name').value;
+            const severity = parseInt(document.getElementById('symptom-severity').value);
+            const notes = document.getElementById('symptom-notes').value;
+            
+            if (symptom) {
+                symptoms.unshift({
+                    id: Date.now(),
+                    date: new Date().toISOString().split('T')[0],
+                    symptom,
+                    severity,
+                    notes
+                });
+                renderSymptoms();
+                hideModal();
+            }
+        }
+
+        function showAppointmentModal() {
+            const content = `
+                <div class="space-y-4">
+                    <div class="bg-violet-50 rounded-lg p-4">
+                        <div class="flex items-center mb-2">
+                            <i data-lucide="calendar" class="text-violet-600 mr-2 w-5 h-5"></i>
+                            <span class="font-semibold">Date & Time</span>
+                        </div>
+                        <p class="text-gray-700">2024-01-20 at 10:30 AM</p>
+                    </div>
+                    <div class="bg-indigo-50 rounded-lg p-4">
+                        <div class="flex items-center mb-2">
+                            <i data-lucide="user" class="text-indigo-600 mr-2 w-5 h-5"></i>
+                            <span class="font-semibold">Doctor</span>
+                        </div>
+                        <p class="text-gray-700">Dr. Sarah Johnson</p>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="flex items-center mb-2">
+                            <i data-lucide="map-pin" class="text-green-600 mr-2 w-5 h-5"></i>
+                            <span class="font-semibold">Location</span>
+                        </div>
+                        <p class="text-gray-700 mb-2">123 Medical Center Dr, Health City, HC 12345</p>
+                        <a href="https://maps.google.com/?q=123+Medical+Center+Dr,+Health+City,+HC+12345" target="_blank" class="text-green-600 hover:text-green-700 text-sm font-medium">
+                            View on Map →
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            showModal('Appointment Details', content);
+            lucide.createIcons();
+        }
+
+        function loadEducationalResources() {
+            const content = document.getElementById('resources-content');
+            
+            setTimeout(() => {
+                const resources = [
+                    { id: 1, title: 'Understanding Parkinson\'s Disease', url: '#' },
+                    { id: 2, title: 'Exercise and Movement Therapy', url: '#' },
+                    { id: 3, title: 'Nutrition for Neurological Health', url: '#' },
+                    { id: 4, title: 'Managing Medication Side Effects', url: '#' },
+                    { id: 5, title: 'Sleep and Neurological Conditions', url: '#' }
+                ];
+                
+                content.innerHTML = `
+                    <div class="space-y-3">
+                        ${resources.map(resource => `
+                            <a href="${resource.url}" target="_blank" class="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div class="flex items-center">
+                                    <i data-lucide="file-text" class="text-violet-600 mr-3 w-5 h-5"></i>
+                                    <span class="text-gray-800 hover:text-violet-600">${resource.title}</span>
+                                </div>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+                lucide.createIcons();
+            }, 1000);
+        }
+
+        function loadDoctorInsights() {
+            const content = document.getElementById('ai-insights-content');
+            
+            setTimeout(() => {
+                content.innerHTML = `
+                    <div class="space-y-6">
+                        <!-- Summary -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-semibold mb-2">Recent Activity Summary</h4>
+                            <p class="text-gray-700">Patient has logged 3 symptoms in the past week with varying severity. Medication adherence remains excellent at 95%. Recent tremor episodes show slight increase in frequency.</p>
+                        </div>
+
+                        <!-- Risk Level -->
+                        <div class="flex items-center space-x-4">
+                            <span class="font-semibold">Risk Level:</span>
+                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                                Medium
+                            </span>
+                        </div>
+
+                        <!-- Chart -->
+                        <div>
+                            <h4 class="font-semibold mb-4">Key Symptom Trends</h4>
+                            <div class="h-64">
+                                <canvas id="symptom-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Actionable Insights -->
+                        <div>
+                            <h4 class="font-semibold mb-4">Actionable Insights</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                    <i data-lucide="phone" class="text-blue-600 mt-1 w-5 h-5"></i>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800">Patient shows increased tremor severity - consider medication adjustment</p>
+                                        <span class="inline-block mt-1 px-2 py-1 text-xs rounded bg-red-100 text-red-800">high priority</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                    <i data-lucide="check" class="text-green-600 mt-1 w-5 h-5"></i>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800">Medication adherence is excellent - continue current regimen</p>
+                                        <span class="inline-block mt-1 px-2 py-1 text-xs rounded bg-green-100 text-green-800">low priority</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                    <i data-lucide="activity" class="text-orange-600 mt-1 w-5 h-5"></i>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800">Symptom patterns suggest need for physical therapy referral</p>
+                                        <span class="inline-block mt-1 px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">medium priority</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                lucide.createIcons();
+                createChart();
+            }, 800);
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('symptom-chart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['1/10', '1/11', '1/12', '1/13', '1/14', '1/15'],
+                    datasets: [
+                        {
+                            label: 'Tremor',
+                            data: [2, 3, 1, 2, 4, 3],
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Stiffness',
+                            data: [3, 2, 4, 3, 4, 2],
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Fatigue',
+                            data: [1, 2, 3, 2, 3, 1],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Navigation
+            document.getElementById('nav-patient').addEventListener('click', () => switchTab('patient'));
+            document.getElementById('nav-resources').addEventListener('click', () => switchTab('resources'));
+            document.getElementById('nav-doctor').addEventListener('click', () => switchTab('doctor'));
+            
+            // Modal
+            document.getElementById('modal-close').addEventListener('click', hideModal);
+            document.getElementById('modal-overlay').addEventListener('click', function(e) {
+                if (e.target === this) hideModal();
+            });
+            
+            // Buttons
+            document.getElementById('add-medication-btn').addEventListener('click', showMedicationModal);
+            document.getElementById('add-symptom-btn').addEventListener('click', showSymptomModal);
+            document.getElementById('view-appointment-btn').addEventListener('click', showAppointmentModal);
+            
+            // Initial render
+            renderMedications();
+            renderSymptoms();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96f1b3a5973c2e37',t:'MTc1NTE4NzYxMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
