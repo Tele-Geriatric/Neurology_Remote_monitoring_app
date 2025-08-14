@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroMonitor - Patient Care Dashboard</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.js"></script>
+    <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        violet: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                        },
+                        indigo: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#5b21b6',
+                            700: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-violet-50 to-indigo-50 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+        const { 
+            User, Calendar, Pill, Activity, BookOpen, Phone, AlertTriangle, 
+            TrendingUp, Plus, Edit, Trash2, Eye, MapPin, X, Check, 
+            Brain, Stethoscope, Clock, FileText
+        } = lucideReact;
+
+        // Modal Component
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center p-6 border-b">
+                            <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Card Component
+        const Card = ({ title, icon: Icon, children, className = "" }) => (
+            <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
+                <div className="flex items-center mb-4">
+                    <Icon className="text-violet-600 mr-3" size={24} />
+                    <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+                </div>
+                {children}
+            </div>
+        );
+
+        // Button Component
+        const Button = ({ variant = "primary", size = "md", children, onClick, className = "" }) => {
+            const baseClasses = "font-medium rounded-lg transition-colors duration-200 flex items-center justify-center";
+            const variants = {
+                primary: "bg-violet-600 hover:bg-violet-700 text-white",
+                secondary: "bg-gray-200 hover:bg-gray-300 text-gray-800",
+                danger: "bg-red-500 hover:bg-red-600 text-white",
+                success: "bg-green-500 hover:bg-green-600 text-white"
+            };
+            const sizes = {
+                sm: "px-3 py-1.5 text-sm",
+                md: "px-4 py-2",
+                lg: "px-6 py-3 text-lg"
+            };
+
+            return (
+                <button 
+                    onClick={onClick}
+                    className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
+                >
+                    {children}
+                </button>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('patient');
+            const [medications, setMedications] = useState([
+                { id: 1, name: 'Levodopa', dose: '100mg', frequency: '3x daily', lastTaken: '2024-01-15 08:00' },
+                { id: 2, name: 'Carbidopa', dose: '25mg', frequency: '3x daily', lastTaken: '2024-01-15 08:00' },
+                { id: 3, name: 'Ropinirole', dose: '2mg', frequency: '2x daily', lastTaken: '2024-01-14 20:00' }
+            ]);
+
+            const [symptoms, setSymptoms] = useState([
+                { id: 1, date: '2024-01-15', symptom: 'Tremor', severity: 3, notes: 'Mild tremor in left hand' },
+                { id: 2, date: '2024-01-14', symptom: 'Stiffness', severity: 4, notes: 'Morning stiffness lasted 2 hours' },
+                { id: 3, date: '2024-01-13', symptom: 'Fatigue', severity: 2, notes: 'Felt tired after lunch' }
+            ]);
+
+            const [educationalResources, setEducationalResources] = useState([]);
+            const [aiInsights, setAiInsights] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+
+            // Modal states
+            const [showMedicationModal, setShowMedicationModal] = useState(false);
+            const [showSymptomModal, setShowSymptomModal] = useState(false);
+            const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+            const [editingMedication, setEditingMedication] = useState(null);
+
+            // Form states
+            const [medicationForm, setMedicationForm] = useState({ name: '', dose: '', frequency: '' });
+            const [symptomForm, setSymptomForm] = useState({ symptom: '', severity: 1, notes: '' });
+
+            const appointment = {
+                date: '2024-01-20',
+                time: '10:30 AM',
+                doctor: 'Dr. Sarah Johnson',
+                address: '123 Medical Center Dr, Health City, HC 12345'
+            };
+
+            const chartData = [
+                { date: '1/10', tremor: 2, stiffness: 3, fatigue: 1 },
+                { date: '1/11', tremor: 3, stiffness: 2, fatigue: 2 },
+                { date: '1/12', tremor: 1, stiffness: 4, fatigue: 3 },
+                { date: '1/13', tremor: 2, stiffness: 3, fatigue: 2 },
+                { date: '1/14', tremor: 4, stiffness: 4, fatigue: 3 },
+                { date: '1/15', tremor: 3, stiffness: 2, fatigue: 1 }
+            ];
+
+            // Simulate API calls
+            useEffect(() => {
+                if (activeTab === 'resources') {
+                    setIsLoading(true);
+                    setTimeout(() => {
+                        setEducationalResources([
+                            { id: 1, title: 'Understanding Parkinson\'s Disease', url: '#' },
+                            { id: 2, title: 'Exercise and Movement Therapy', url: '#' },
+                            { id: 3, title: 'Nutrition for Neurological Health', url: '#' },
+                            { id: 4, title: 'Managing Medication Side Effects', url: '#' },
+                            { id: 5, title: 'Sleep and Neurological Conditions', url: '#' }
+                        ]);
+                        setIsLoading(false);
+                    }, 1000);
+                }
+            }, [activeTab]);
+
+            useEffect(() => {
+                if (activeTab === 'doctor') {
+                    setIsLoading(true);
+                    setTimeout(() => {
+                        setAiInsights([
+                            { id: 1, text: 'Patient shows increased tremor severity - consider medication adjustment', icon: 'phone', priority: 'high' },
+                            { id: 2, text: 'Medication adherence is excellent - continue current regimen', icon: 'check', priority: 'low' },
+                            { id: 3, text: 'Symptom patterns suggest need for physical therapy referral', icon: 'activity', priority: 'medium' }
+                        ]);
+                        setIsLoading(false);
+                    }, 800);
+                }
+            }, [activeTab]);
+
+            const handleAddMedication = () => {
+                if (medicationForm.name && medicationForm.dose && medicationForm.frequency) {
+                    const newMedication = {
+                        id: Date.now(),
+                        ...medicationForm,
+                        lastTaken: 'Not taken yet'
+                    };
+                    setMedications([...medications, newMedication]);
+                    setMedicationForm({ name: '', dose: '', frequency: '' });
+                    setShowMedicationModal(false);
+                }
+            };
+
+            const handleEditMedication = (medication) => {
+                setEditingMedication(medication);
+                setMedicationForm({ name: medication.name, dose: medication.dose, frequency: medication.frequency });
+                setShowMedicationModal(true);
+            };
+
+            const handleUpdateMedication = () => {
+                if (medicationForm.name && medicationForm.dose && medicationForm.frequency) {
+                    setMedications(medications.map(med => 
+                        med.id === editingMedication.id 
+                            ? { ...med, ...medicationForm }
+                            : med
+                    ));
+                    setMedicationForm({ name: '', dose: '', frequency: '' });
+                    setEditingMedication(null);
+                    setShowMedicationModal(false);
+                }
+            };
+
+            const handleRemoveMedication = (id) => {
+                setMedications(medications.filter(med => med.id !== id));
+            };
+
+            const handleLogTaken = (id) => {
+                const now = new Date().toLocaleString();
+                setMedications(medications.map(med => 
+                    med.id === id ? { ...med, lastTaken: now } : med
+                ));
+            };
+
+            const handleAddSymptom = () => {
+                if (symptomForm.symptom) {
+                    const newSymptom = {
+                        id: Date.now(),
+                        date: new Date().toISOString().split('T')[0],
+                        ...symptomForm
+                    };
+                    setSymptoms([newSymptom, ...symptoms]);
+                    setSymptomForm({ symptom: '', severity: 1, notes: '' });
+                    setShowSymptomModal(false);
+                }
+            };
+
+            const renderPatientDashboard = () => (
+                <div className="space-y-6">
+                    {/* Medication Adherence */}
+                    <Card title="Medication Adherence" icon={Pill}>
+                        <div className="space-y-4">
+                            {medications.map(med => (
+                                <div key={med.id} className="bg-gray-50 rounded-lg p-4">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-800">{med.name}</h3>
+                                            <p className="text-sm text-gray-600">{med.dose} • {med.frequency}</p>
+                                            <p className="text-xs text-gray-500">Last taken: {med.lastTaken}</p>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                            <Button size="sm" variant="success" onClick={() => handleLogTaken(med.id)}>
+                                                <Check size={16} className="mr-1" />
+                                                Log Taken
+                                            </Button>
+                                            <Button size="sm" variant="secondary" onClick={() => handleEditMedication(med)}>
+                                                <Edit size={16} />
+                                            </Button>
+                                            <Button size="sm" variant="danger" onClick={() => handleRemoveMedication(med.id)}>
+                                                <Trash2 size={16} />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <Button onClick={() => setShowMedicationModal(true)} className="w-full">
+                                <Plus size={20} className="mr-2" />
+                                Add New Medication
+                            </Button>
+                        </div>
+                    </Card>
+
+                    {/* Symptom Log */}
+                    <Card title="My Symptom Log" icon={Activity}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b">
+                                        <th className="text-left py-2">Date</th>
+                                        <th className="text-left py-2">Symptom</th>
+                                        <th className="text-left py-2">Severity</th>
+                                        <th className="text-left py-2">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {symptoms.map(symptom => (
+                                        <tr key={symptom.id} className="border-b">
+                                            <td className="py-2">{symptom.date}</td>
+                                            <td className="py-2">{symptom.symptom}</td>
+                                            <td className="py-2">
+                                                <span className={`px-2 py-1 rounded text-xs ${
+                                                    symptom.severity <= 2 ? 'bg-green-100 text-green-800' :
+                                                    symptom.severity <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {symptom.severity}/5
+                                                </span>
+                                            </td>
+                                            <td className="py-2">{symptom.notes}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <Button onClick={() => setShowSymptomModal(true)} className="w-full mt-4">
+                            <Plus size={20} className="mr-2" />
+                            Log New Symptom
+                        </Button>
+                    </Card>
+
+                    {/* Upcoming Appointment */}
+                    <Card title="Upcoming Appointment" icon={Calendar}>
+                        <div className="bg-violet-50 rounded-lg p-4">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="font-semibold text-violet-800">Next Appointment</p>
+                                    <p className="text-violet-600">{appointment.date} at {appointment.time}</p>
+                                </div>
+                                <Button variant="secondary" onClick={() => setShowAppointmentModal(true)}>
+                                    <Eye size={16} className="mr-2" />
+                                    View Details
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            );
+
+            const renderEducationalResources = () => (
+                <div className="space-y-6">
+                    <Card title="Educational Resources" icon={BookOpen}>
+                        {isLoading ? (
+                            <div className="text-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+                                <p className="mt-2 text-gray-600">Loading resources...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {educationalResources.map(resource => (
+                                    <a
+                                        key={resource.id}
+                                        href={resource.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <div className="flex items-center">
+                                            <FileText className="text-violet-600 mr-3" size={20} />
+                                            <span className="text-gray-800 hover:text-violet-600">{resource.title}</span>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+                </div>
+            );
+
+            const renderDoctorDashboard = () => (
+                <div className="space-y-6">
+                    {/* Patient Header */}
+                    <Card title="Patient Overview" icon={User}>
+                        <div className="bg-indigo-50 rounded-lg p-4">
+                            <h3 className="font-semibold text-indigo-800">John Smith</h3>
+                            <p className="text-indigo-600">Parkinson's Disease</p>
+                            <p className="text-sm text-indigo-500">Patient ID: PD-2024-001</p>
+                        </div>
+                    </Card>
+
+                    {/* AI Insights */}
+                    <Card title="AI-Powered Patient Insights" icon={Brain}>
+                        {isLoading ? (
+                            <div className="text-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+                                <p className="mt-2 text-gray-600">Analyzing patient data...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {/* Summary */}
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="font-semibold mb-2">Recent Activity Summary</h4>
+                                    <p className="text-gray-700">Patient has logged 3 symptoms in the past week with varying severity. Medication adherence remains excellent at 95%. Recent tremor episodes show slight increase in frequency.</p>
+                                </div>
+
+                                {/* Risk Level */}
+                                <div className="flex items-center space-x-4">
+                                    <span className="font-semibold">Risk Level:</span>
+                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                                        Medium
+                                    </span>
+                                </div>
+
+                                {/* Chart */}
+                                <div>
+                                    <h4 className="font-semibold mb-4">Key Symptom Trends</h4>
+                                    <div className="h-64">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={chartData}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="date" />
+                                                <YAxis domain={[0, 5]} />
+                                                <Tooltip />
+                                                <Line type="monotone" dataKey="tremor" stroke="#8b5cf6" strokeWidth={2} />
+                                                <Line type="monotone" dataKey="stiffness" stroke="#6366f1" strokeWidth={2} />
+                                                <Line type="monotone" dataKey="fatigue" stroke="#10b981" strokeWidth={2} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Actionable Insights */}
+                                <div>
+                                    <h4 className="font-semibold mb-4">Actionable Insights</h4>
+                                    <div className="space-y-3">
+                                        {aiInsights.map(insight => (
+                                            <div key={insight.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                                {insight.icon === 'phone' && <Phone className="text-blue-600 mt-1" size={20} />}
+                                                {insight.icon === 'check' && <Check className="text-green-600 mt-1" size={20} />}
+                                                {insight.icon === 'activity' && <Activity className="text-orange-600 mt-1" size={20} />}
+                                                <div className="flex-1">
+                                                    <p className="text-gray-800">{insight.text}</p>
+                                                    <span className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
+                                                        insight.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                                        insight.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-green-100 text-green-800'
+                                                    }`}>
+                                                        {insight.priority} priority
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </Card>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen pb-20">
+                    {/* Header */}
+                    <header className="bg-white shadow-sm border-b">
+                        <div className="max-w-4xl mx-auto px-4 py-4">
+                            <div className="flex items-center">
+                                <Brain className="text-violet-600 mr-3" size={32} />
+                                <h1 className="text-2xl font-bold text-gray-800">NeuroMonitor</h1>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="max-w-4xl mx-auto px-4 py-6">
+                        {activeTab === 'patient' && renderPatientDashboard()}
+                        {activeTab === 'resources' && renderEducationalResources()}
+                        {activeTab === 'doctor' && renderDoctorDashboard()}
+                    </main>
+
+                    {/* Bottom Navigation */}
+                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+                        <div className="max-w-4xl mx-auto px-4">
+                            <div className="flex justify-around py-2">
+                                <button
+                                    onClick={() => setActiveTab('patient')}
+                                    className={`flex flex-col items-center py-2 px-4 rounded-lg transition-colors ${
+                                        activeTab === 'patient' ? 'text-violet-600 bg-violet-50' : 'text-gray-600'
+                                    }`}
+                                >
+                                    <User size={24} />
+                                    <span className="text-xs mt-1">Patient</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('resources')}
+                                    className={`flex flex-col items-center py-2 px-4 rounded-lg transition-colors ${
+                                        activeTab === 'resources' ? 'text-violet-600 bg-violet-50' : 'text-gray-600'
+                                    }`}
+                                >
+                                    <BookOpen size={24} />
+                                    <span className="text-xs mt-1">Resources</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('doctor')}
+                                    className={`flex flex-col items-center py-2 px-4 rounded-lg transition-colors ${
+                                        activeTab === 'doctor' ? 'text-violet-600 bg-violet-50' : 'text-gray-600'
+                                    }`}
+                                >
+                                    <Stethoscope size={24} />
+                                    <span className="text-xs mt-1">Doctor</span>
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Modals */}
+                    <Modal
+                        isOpen={showMedicationModal}
+                        onClose={() => {
+                            setShowMedicationModal(false);
+                            setEditingMedication(null);
+                            setMedicationForm({ name: '', dose: '', frequency: '' });
+                        }}
+                        title={editingMedication ? "Edit Medication" : "Add New Medication"}
+                    >
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Medication Name</label>
+                                <input
+                                    type="text"
+                                    value={medicationForm.name}
+                                    onChange={(e) => setMedicationForm({...medicationForm, name: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                                    placeholder="e.g., Levodopa"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Dose</label>
+                                <input
+                                    type="text"
+                                    value={medicationForm.dose}
+                                    onChange={(e) => setMedicationForm({...medicationForm, dose: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                                    placeholder="e.g., 100mg"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                <input
+                                    type="text"
+                                    value={medicationForm.frequency}
+                                    onChange={(e) => setMedicationForm({...medicationForm, frequency: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                                    placeholder="e.g., 3x daily"
+                                />
+                            </div>
+                            <div className="flex space-x-3 pt-4">
+                                <Button 
+                                    onClick={editingMedication ? handleUpdateMedication : handleAddMedication}
+                                    className="flex-1"
+                                >
+                                    {editingMedication ? 'Update' : 'Add'} Medication
+                                </Button>
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => {
+                                        setShowMedicationModal(false);
+                                        setEditingMedication(null);
+                                        setMedicationForm({ name: '', dose: '', frequency: '' });
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
+
+                    <Modal
+                        isOpen={showSymptomModal}
+                        onClose={() => {
+                            setShowSymptomModal(false);
+                            setSymptomForm({ symptom: '', severity: 1, notes: '' });
+                        }}
+                        title="Log New Symptom"
+                    >
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Symptom</label>
+                                <input
+                                    type="text"
+                                    value={symptomForm.symptom}
+                                    onChange={(e) => setSymptomForm({...symptomForm, symptom: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                                    placeholder="e.g., Tremor, Stiffness, Fatigue"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Severity (1-5)</label>
+                                <select
+                                    value={symptomForm.severity}
+                                    onChange={(e) => setSymptomForm({...symptomForm, severity: parseInt(e.target.value)})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                                >
+                                    <option value={1}>1 - Very Mild</option>
+                                    <option value={2}>2 - Mild</option>
+                                    <option value={3}>3 - Moderate</option>
+                                    <option value={4}>4 - Severe</option>
+                                    <option value={5}>5 - Very Severe</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <textarea
+                                    value={symptomForm.notes}
+                                    onChange={(e) => setSymptomForm({...symptomForm, notes: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                                    rows="3"
+                                    placeholder="Additional details about the symptom..."
+                                />
+                            </div>
+                            <div className="flex space-x-3 pt-4">
+                                <Button onClick={handleAddSymptom} className="flex-1">
+                                    Log Symptom
+                                </Button>
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => {
+                                        setShowSymptomModal(false);
+                                        setSymptomForm({ symptom: '', severity: 1, notes: '' });
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
+
+                    <Modal
+                        isOpen={showAppointmentModal}
+                        onClose={() => setShowAppointmentModal(false)}
+                        title="Appointment Details"
+                    >
+                        <div className="space-y-4">
+                            <div className="bg-violet-50 rounded-lg p-4">
+                                <div className="flex items-center mb-2">
+                                    <Calendar className="text-violet-600 mr-2" size={20} />
+                                    <span className="font-semibold">Date & Time</span>
+                                </div>
+                                <p className="text-gray-700">{appointment.date} at {appointment.time}</p>
+                            </div>
+                            <div className="bg-indigo-50 rounded-lg p-4">
+                                <div className="flex items-center mb-2">
+                                    <User className="text-indigo-600 mr-2" size={20} />
+                                    <span className="font-semibold">Doctor</span>
+                                </div>
+                                <p className="text-gray-700">{appointment.doctor}</p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg p-4">
+                                <div className="flex items-center mb-2">
+                                    <MapPin className="text-green-600 mr-2" size={20} />
+                                    <span className="font-semibold">Location</span>
+                                </div>
+                                <p className="text-gray-700 mb-2">{appointment.address}</p>
+                                <a 
+                                    href={`https://maps.google.com/?q=${encodeURIComponent(appointment.address)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-green-600 hover:text-green-700 text-sm font-medium"
+                                >
+                                    View on Map →
+                                </a>
+                            </div>
+                        </div>
+                    </Modal>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96f19bad35c5e17b',t:'MTc1NTE4NjYyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
