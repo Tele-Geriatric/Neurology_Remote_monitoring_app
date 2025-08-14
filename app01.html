@@ -37,7 +37,7 @@
     <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans antialiased text-gray-800 pb-20">
-<h1>Test</h1>
+
     <!-- Header -->
     <header class="bg-white shadow-md p-4 sticky top-0 z-50 rounded-b-3xl">
         <div class="container mx-auto flex justify-center items-center">
@@ -216,8 +216,9 @@
                     break;
             }
 
-            // Re-render Lucide icons after DOM manipulation
-            if (lucide) {
+            // A single, reliable call to render the icons after all content has been created
+            // This prevents a ReferenceError if the library hasn't finished loading yet.
+            if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         };
@@ -324,7 +325,7 @@
                         </a>
                     </li>
                 `).join('');
-                if (lucide) {
+                if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
                 }
             });
@@ -394,7 +395,7 @@
                         </ul>
                     </div>
                 `;
-                if (lucide) {
+                if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
                 }
                 renderSymptomChart();
@@ -443,9 +444,6 @@
                     </div>
                 </li>
             `).join('');
-            if (lucide) {
-                lucide.createIcons();
-            }
         };
         
         const renderSymptomChart = () => {
@@ -603,7 +601,7 @@
                     </a>
                 `;
                 showModal('appointment-modal');
-                if (lucide) {
+                if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
                 }
             });
@@ -647,4 +645,3 @@
     </script>
 </body>
 </html>
-
