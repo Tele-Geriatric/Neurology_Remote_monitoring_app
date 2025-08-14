@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neurology Monitoring App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.min.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+    .fade-enter-active, .fade-leave-active {
+      transition: opacity 0.3s;
+    }
+    .fade-enter, .fade-leave-to {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-indigo-50 text-gray-800">
+  <div id="app" v-cloak>
+    <!-- Main Content -->
+    <main class="pb-16">
+      <!-- Patient Dashboard -->
+      <div v-if="activeTab === 'patient'" class="p-4 space-y-6">
+        <h1 class="text-2xl font-bold text-indigo-900">Patient Dashboard</h1>
+        
+        <!-- Medication Adherence Card -->
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold flex items-center text-violet-800">
+              <i data-lucide="pill" class="mr-2"></i> Medication Adherence
+            </h2>
+            <button 
+              @click="showMedicationModal = true"
+              class="bg-violet-600 text-white px-3 py-1 rounded-lg flex items-center text-sm hover:bg-violet-700 transition"
+            >
+              <i data-lucide="plus" class="mr-1"></i> Add New
+            </button>
+          </div>
+          
+          <div class="space-y-3">
+            <div v-for="med in medications" :key="med.id" class="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-medium">{{ med.name }}</h3>
+                  <p class="text-sm text-gray-600">{{ med.dose }} • {{ med.frequency }}</p>
+                  <p class="text-xs text-gray-500 mt-1">Last taken: {{ med.lastTaken }}</p>
+                </div>
+                <div class="flex space-x-2">
+                  <button 
+                    @click="logMedicationTaken(med.id)"
+                    class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200 transition"
+                  >
+                    Log Taken
+                  </button>
+                  <button 
+                    @click="editMedication(med.id)"
+                    class="text-gray-500 hover:text-gray-700 transition"
+                  >
+                    <i data-lucide="edit"></i>
+                  </button>
+                  <button 
+                    @click="removeMedication(med.id)"
+                    class="text-gray-500 hover:text-red-500 transition"
+                  >
+                    <i data-lucide="trash-2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <p v-if="medications.length === 0" class="text-gray-500 text-center py-4">No medications added yet</p>
+          </div>
+        </div>
+        
+        <!-- Symptom Log Card -->
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold flex items-center text-violet-800">
+              <i data-lucide="alert-circle" class="mr-2"></i> My Symptom Log
+            </h2>
+            <button 
+              @click="showSymptomModal = true"
+              class="bg-violet-600 text-white px-3 py-1 rounded-lg flex items-center text-sm hover:bg-violet-700 transition"
+            >
+              <i data-lucide="plus" class="mr-1"></i> Log New
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-left text-sm text-gray-500 border-b">
+                  <th class="pb-2">Date</th>
+                  <th class="pb-2">Symptom</th>
+                  <th class="pb-2">Severity</th>
+                  <th class="pb-2">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="symptom in symptoms" :key="symptom.id" class="border-b border-gray-100 last:border-0">
+                  <td class="py-3 text-sm">{{ symptom.date }}</td>
+                  <td class="py-3 font-medium">{{ symptom.name }}</td>
+                  <td class="py-3">
+                    <div class="flex items-center">
+                      <div v-for="i in 5" :key="i" 
+                        :class="{'w-2 h-2 rounded-full mr-1': true, 
+                                 'bg-red-500': i <= symptom.severity, 
+                                 'bg-gray-200': i > symptom.severity}"></div>
+                    </div>
+                  </td>
+                  <td class="py-3 text-sm text-gray-600">{{ symptom.notes }}</td>
+                </tr>
+                
+                <tr v-if="symptoms.length === 0">
+                  <td colspan="4" class="py-4 text-gray-500 text-center">No symptoms logged yet</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Upcoming Appointment Card -->
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <h2 class="text-lg font-semibold flex items-center text-violet-800 mb-4">
+            <i data-lucide="calendar" class="mr-2"></i> Upcoming Appointment
+          </h2>
+          
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="font-medium">May 20, 2023</p>
+              <p class="text-sm text-gray-600">10:30 AM with Dr. Smith</p>
+            </div>
+            <button 
+              @click="showAppointmentModal = true"
+              class="text-indigo-600 hover:text-indigo-800 flex items-center text-sm"
+            >
+              View Details <i data-lucide="chevron-right" class="ml-1"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Educational Resources -->
+      <div v-if="activeTab === 'education'" class="p-4">
+        <h1 class="text-2xl font-bold text-indigo-900 mb-6">Educational Resources</h1>
+        
+        <div v-if="educationalResources.length > 0" class="bg-white rounded-xl shadow-md p-4 space-y-4">
+          <a 
+            v-for="resource in educationalResources" 
+            :key="resource.id" 
+            :href="resource.url" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="block p-3 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition"
+          >
+            <div class="flex items-center">
+              <i data-lucide="book-open" class="text-indigo-600 mr-3"></i>
+              <span class="font-medium">{{ resource.title }}</span>
+            </div>
+          </a>
+        </div>
+        
+        <div v-else class="bg-white rounded-xl shadow-md p-8 text-center">
+          <div class="animate-pulse flex flex-col items-center">
+            <i data-lucide="book-open" class="text-gray-300 mb-4"></i>
+            <p class="text-gray-500">Loading resources...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Doctor's Dashboard -->
+      <div v-if="activeTab === 'doctor'" class="p-4 space-y-6">
+        <h1 class="text-2xl font-bold text-indigo-900">Doctor's Dashboard</h1>
+        
+        <!-- Patient Header -->
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <div class="flex items-center space-x-4">
+            <div class="bg-indigo-100 p-3 rounded-full">
+              <i data-lucide="stethoscope" class="text-indigo-600"></i>
+            </div>
+            <div>
+              <h2 class="font-bold text-lg">John Doe</h2>
+              <p class="text-sm text-gray-600">Epilepsy • Patient ID: NEU-2023-045</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- AI-Powered Insights -->
+        <div class="bg-white rounded-xl shadow-md p-4">
+          <h2 class="text-lg font-semibold flex items-center text-violet-800 mb-4">
+            <i data-lucide="activity" class="mr-2"></i> AI-Powered Patient Insights
+          </h2>
+          
+          <div class="mb-6">
+            <p class="text-gray-700 mb-4">
+              Patient has shown increasing headache severity over the past week with one missed medication dose. 
+              Overall adherence is good but symptom patterns warrant attention.
+            </p>
+            
+            <div class="flex items-center">
+              <span class="font-medium mr-2">Risk Level:</span>
+              <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">Moderate</span>
+            </div>
+          </div>
+          
+          <!-- Symptom Trends Chart -->
+          <div class="h-64 mb-6">
+            <h3 class="font-medium text-gray-700 mb-2">Key Symptom Trends</h3>
+            <div id="chart-container"></div>
+          </div>
+          
+          <!-- Actionable Insights -->
+          <div>
+            <h3 class="font-medium text-gray-700 mb-3">Actionable Insights</h3>
+            <div class="space-y-3">
+              <div v-if="insights.length > 0">
+                <div v-for="insight in insights" :key="insight.id" class="flex items-start p-3 bg-indigo-50 rounded-lg">
+                  <div class="text-indigo-600 mr-3 mt-0.5">
+                    <i v-if="insight.icon === 'bell'" data-lucide="bell"></i>
+                    <i v-if="insight.icon === 'alert-circle'" data-lucide="alert-circle"></i>
+                    <i v-if="insight.icon === 'phone'" data-lucide="phone"></i>
+                  </div>
+                  <p class="text-gray-700">{{ insight.text }}</p>
+                </div>
+              </div>
+              
+              <div v-else class="animate-pulse flex flex-col items-center p-6">
+                <i data-lucide="activity" class="text-gray-300 mb-4"></i>
+                <p class="text-gray-500">Analyzing patient data...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white shadow-lg flex justify-around items-center p-2 border-t border-gray-100">
+      <button 
+        @click="activeTab = 'patient'" 
+        :class="`flex flex-col items-center p-2 rounded-lg ${activeTab === 'patient' ? 'text-violet-700 bg-violet-100' : 'text-gray-500'}`"
+      >
+        <i data-lucide="home"></i>
+        <span class="text-xs mt-1">Patient</span>
+      </button>
+      <button 
+        @click="activeTab = 'education'" 
+        :class="`flex flex-col items-center p-2 rounded-lg ${activeTab === 'education' ? 'text-violet-700 bg-violet-100' : 'text-gray-500'}`"
+      >
+        <i data-lucide="book-open"></i>
+        <span class="text-xs mt-1">Resources</span>
+      </button>
+      <button 
+        @click="activeTab = 'doctor'" 
+        :class="`flex flex-col items-center p-2 rounded-lg ${activeTab === 'doctor' ? 'text-violet-700 bg-violet-100' : 'text-gray-500'}`"
+      >
+        <i data-lucide="stethoscope"></i>
+        <span class="text-xs mt-1">Doctor</span>
+      </button>
+    </nav>
+    
+    <!-- Medication Modal -->
+    <div v-if="showMedicationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4 text-indigo-900">
+          {{ editingMedicationId ? 'Edit Medication' : 'Add New Medication' }}
+        </h2>
+        
+        <form @submit.prevent="handleMedicationSubmit">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Medication Name</label>
+              <input
+                type="text"
+                v-model="newMedication.name"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dose</label>
+              <input
+                type="text"
+                v-model="newMedication.dose"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+              <input
+                type="text"
+                v-model="newMedication.frequency"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Last Taken Date</label>
+              <input
+                type="date"
+                v-model="newMedication.lastTaken"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+          </div>
+          
+          <div class="mt-6 flex justify-end space-x-3">
+            <button
+              type="button"
+              @click="closeMedicationModal"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              {{ editingMedicationId ? 'Update' : 'Add' }} Medication
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Symptom Modal -->
+    <div v-if="showSymptomModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4 text-indigo-900">Log New Symptom</h2>
+        
+        <form @submit.prevent="handleSymptomSubmit">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Symptom Name</label>
+              <input
+                type="text"
+                v-model="newSymptom.name"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Severity (1-5)</label>
+              <select
+                v-model="newSymptom.severity"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                <option v-for="num in 5" :key="num" :value="num">
+                  {{ num }} - {{ num === 1 ? 'Very mild' : num === 5 ? 'Very severe' : 'Moderate' }}
+                </option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input
+                type="date"
+                v-model="newSymptom.date"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea
+                v-model="newSymptom.notes"
+                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+          
+          <div class="mt-6 flex justify-end space-x-3">
+            <button
+              type="button"
+              @click="showSymptomModal = false"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Log Symptom
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Appointment Modal -->
+    <div v-if="showAppointmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4 text-indigo-900">Appointment Details</h2>
+        
+        <div class="space-y-4">
+          <div class="flex items-start">
+            <i data-lucide="stethoscope" class="text-indigo-600 mr-3 mt-0.5"></i>
+            <div>
+              <h3 class="font-medium">Dr. Sarah Smith</h3>
+              <p class="text-sm text-gray-600">Neurologist</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start">
+            <i data-lucide="calendar" class="text-indigo-600 mr-3 mt-0.5"></i>
+            <div>
+              <p class="font-medium">May 20, 2023</p>
+              <p class="text-sm text-gray-600">10:30 AM - 11:15 AM</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start">
+            <i data-lucide="map-pin" class="text-indigo-600 mr-3 mt-0.5"></i>
+            <div>
+              <p class="font-medium">Neurology Center</p>
+              <p class="text-sm text-gray-600">123 Medical Drive, Suite 400, Boston, MA 02115</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end">
+          <a
+            href="https://maps.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
+          >
+            <i data-lucide="map-pin" class="mr-2"></i> View on Map
+          </a>
+        </div>
+        
+        <button
+          @click="showAppointmentModal = false"
+          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+        >
+          <i data-lucide="x-circle"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script>
+    const { createApp, ref, onMounted, watch } = Vue;
+    
+    createApp({
+      setup() {
+        // State
+        const activeTab = ref('patient');
+        const showMedicationModal = ref(false);
+        const showSymptomModal = ref(false);
+        const showAppointmentModal = ref(false);
+        const medications = ref([]);
+        const symptoms = ref([]);
+        const educationalResources = ref([]);
+        const insights = ref([]);
+        const newMedication = ref({
+          name: '',
+          dose: '',
+          frequency: '',
+          lastTaken: ''
+        });
+        const newSymptom = ref({
+          name: '',
+          severity: '3',
+          notes: '',
+          date: new Date().toISOString().split('T')[0]
+        });
+        const editingMedicationId = ref(null);
+        let chart = null;
+
+        // Methods
+        const handleMedicationSubmit = () => {
+          if (editingMedicationId.value) {
+            medications.value = medications.value.map(med => 
+              med.id === editingMedicationId.value ? { ...newMedication.value, id: editingMedicationId.value } : med
+            );
+          } else {
+            medications.value = [...medications.value, { 
+              ...newMedication.value, 
+              id: medications.value.length ? Math.max(...medications.value.map(m => m.id)) + 1 : 1 
+            }];
+          }
+          resetMedicationForm();
+          showMedicationModal.value = false;
+        };
+
+        const handleSymptomSubmit = () => {
+          symptoms.value = [...symptoms.value, { 
+            ...newSymptom.value, 
+            id: symptoms.value.length ? Math.max(...symptoms.value.map(s => s.id)) + 1 : 1 
+          }];
+          resetSymptomForm();
+          showSymptomModal.value = false;
+          renderChart();
+        };
+
+        const logMedicationTaken = (id) => {
+          medications.value = medications.value.map(med => 
+            med.id === id ? { ...med, lastTaken: new Date().toISOString().split('T')[0] } : med
+          );
+        };
+
+        const editMedication = (id) => {
+          const medicationToEdit = medications.value.find(med => med.id === id);
+          newMedication.value = { ...medicationToEdit };
+          editingMedicationId.value = id;
+          showMedicationModal.value = true;
+        };
+
+        const removeMedication = (id) => {
+          medications.value = medications.value.filter(med => med.id !== id);
+        };
+
+        const closeMedicationModal = () => {
+          showMedicationModal.value = false;
+          editingMedicationId.value = null;
+          resetMedicationForm();
+        };
+
+        const resetMedicationForm = () => {
+          newMedication.value = { name: '', dose: '', frequency: '', lastTaken: '' };
+        };
+
+        const resetSymptomForm = () => {
+          newSymptom.value = { name: '', severity: '3', notes: '', date: new Date().toISOString().split('T')[0] };
+        };
+
+        const renderChart = () => {
+          const container = document.getElementById('chart-container');
+          if (!container) return;
+          
+          container.innerHTML = '';
+          
+          if (symptoms.value.length === 0) return;
+          
+          const chartData = symptoms.value.map(symptom => ({
+            date: symptom.date.split('-').slice(1).join('/'),
+            [symptom.name]: symptom.severity
+          })).reverse();
+          
+          const mainSymptom = symptoms.value[0].name;
+          
+          chart = recharts.LineChart({
+            width: container.clientWidth,
+            height: 200,
+            data: chartData,
+            margin: { top: 5, right: 30, left: 20, bottom: 5 }
+          }, [
+            recharts.CartesianGrid({ strokeDasharray: '3 3', stroke: '#eee' }),
+            recharts.XAxis({ dataKey: 'date' }),
+            recharts.YAxis({ domain: [0, 5] }),
+            recharts.Tooltip(),
+            recharts.Legend(),
+            recharts.Line({ 
+              type: 'monotone', 
+              dataKey: mainSymptom, 
+              stroke: '#8884d8', 
+              activeDot: { r: 8 } 
+            })
+          ]);
+          
+          container.appendChild(chart);
+        };
+
+        // Initialize data
+        onMounted(() => {
+          // Load icons
+          lucide.createIcons();
+          
+          // Initial data
+          medications.value = [
+            { id: 1, name: 'Levetiracetam', dose: '500mg', frequency: 'Twice daily', lastTaken: '2023-05-15' },
+            { id: 2, name: 'Topiramate', dose: '25mg', frequency: 'Once daily', lastTaken: '2023-05-15' },
+            { id: 3, name: 'Vitamin D', dose: '1000IU', frequency: 'Once daily', lastTaken: '2023-05-14' }
+          ];
+
+          symptoms.value = [
+            { id: 1, name: 'Headache', severity: 4, notes: 'Persistent frontal headache', date: '2023-05-14' },
+            { id: 2, name: 'Dizziness', severity: 2, notes: 'Mild, when standing up', date: '2023-05-13' },
+            { id: 3, name: 'Fatigue', severity: 3, notes: 'Felt tired all day', date: '2023-05-12' }
+          ];
+
+          // Simulate API calls
+          setTimeout(() => {
+            educationalResources.value = [
+              { id: 1, title: 'Understanding Epilepsy', url: 'https://example.com/epilepsy' },
+              { id: 2, title: 'Medication Side Effects Guide', url: 'https://example.com/med-side-effects' },
+              { id: 3, title: 'Managing Neurological Symptoms', url: 'https://example.com/neuro-symptoms' }
+            ];
+          }, 1000);
+
+          setTimeout(() => {
+            insights.value = [
+              { id: 1, text: 'Patient missed Vitamin D dose yesterday', icon: 'bell' },
+              { id: 2, text: 'Headache severity increasing over past week', icon: 'alert-circle' },
+              { id: 3, text: 'Consider follow-up call to discuss symptoms', icon: 'phone' }
+            ];
+          }, 1500);
+          
+          // Initial chart render
+          renderChart();
+        });
+
+        // Watch for changes that require chart updates
+        watch(symptoms, () => {
+          renderChart();
+        }, { deep: true });
+
+        // Watch for tab changes to re-render chart when doctor tab becomes visible
+        watch(activeTab, (newTab) => {
+          if (newTab === 'doctor') {
+            setTimeout(renderChart, 100); // Small delay to ensure DOM is ready
+          }
+        });
+
+        // Watch for window resize to update chart
+        window.addEventListener('resize', renderChart);
+
+        return {
+          activeTab,
+          showMedicationModal,
+          showSymptomModal,
+          showAppointmentModal,
+          medications,
+          symptoms,
+          educationalResources,
+          insights,
+          newMedication,
+          newSymptom,
+          editingMedicationId,
+          handleMedicationSubmit,
+          handleSymptomSubmit,
+          logMedicationTaken,
+          editMedication,
+          removeMedication,
+          closeMedicationModal
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
