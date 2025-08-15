@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>NeuroEase • Daily Health Companion</title>
+  <meta name="theme-color" content="#7c3aed" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] },
+          colors: {
+            grape: { 50: "#f5f3ff", 100: "#ede9fe", 500: "#8b5cf6", 600: "#7c3aed", 700: "#6d28d9" },
+            ocean: { 50: "#eff6ff", 100: "#dbeafe", 500: "#3b82f6", 600: "#2563eb", 700: "#1d4ed8" },
+            meadow:{ 50: "#ecfdf5", 100: "#d1fae5", 500: "#10b981", 600: "#059669", 700: "#047857" },
+            peach: { 50: "#fff7ed", 100: "#ffedd5", 500: "#fb923c", 600: "#f97316", 700: "#ea580c" }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Larger tap targets + readable defaults */
+    :root { --touch: 56px; }
+    button, .btn { min-height: var(--touch); min-width: var(--touch); }
+    .text-lg+, .text-xl+, .text-2xl+ { font-size: clamp(1.125rem, 2.5vw + 1rem, 1.5rem); }
+    /* iOS safari safe area */
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-grape-50 to-ocean-50 min-h-screen text-gray-900 font-sans">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i data-lucide="brain" class="w-8 h-8 text-grape-600"></i>
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight">NeuroEase</h1>
+          <p class="text-sm text-gray-600">Gentle support for daily neurologic care</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="toggle-contrast" class="rounded-xl border px-3 py-2 text-sm font-semibold hover:bg-gray-50" aria-pressed="false">High Contrast</button>
+        <button id="toggle-text" class="rounded-xl border px-3 py-2 text-sm font-semibold hover:bg-gray-50" aria-pressed="false">Large Text</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="max-w-3xl mx-auto px-4 py-4 pb-28 space-y-6">
+    <!-- Daily Check-in Card -->
+    <section id="home" class="rounded-3xl shadow-xl border bg-white p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="p-3 rounded-2xl bg-gradient-to-r from-meadow-500 to-ocean-600 shadow text-white">
+          <i data-lucide="activity" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold">Daily Check‑in</h2>
+          <p class="text-sm text-gray-600">How are you feeling today?</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button class="feel-btn rounded-2xl bg-meadow-100 border border-meadow-200 p-4 flex flex-col items-center gap-2" data-feel="good" aria-label="I feel good">
+          <span class="text-3xl">😊</span><span class="font-semibold">Good</span>
+        </button>
+        <button class="feel-btn rounded-2xl bg-ocean-100 border border-ocean-200 p-4 flex flex-col items-center gap-2" data-feel="ok" aria-label="I feel okay">
+          <span class="text-3xl">🙂</span><span class="font-semibold">Okay</span>
+        </button>
+        <button class="feel-btn rounded-2xl bg-peach-100 border border-peach-200 p-4 flex flex-col items-center gap-2" data-feel="tired" aria-label="I feel tired">
+          <span class="text-3xl">🥱</span><span class="font-semibold">Tired</span>
+        </button>
+        <button class="feel-btn rounded-2xl bg-red-100 border border-red-200 p-4 flex flex-col items-center gap-2" data-feel="bad" aria-label="I feel unwell">
+          <span class="text-3xl">😟</span><span class="font-semibold">Unwell</span>
+        </button>
+      </div>
+      <div class="mt-4 flex items-center gap-2">
+        <button id="checkin-voice" class="rounded-xl px-4 py-3 border font-semibold flex items-center gap-2">
+          <i data-lucide="mic" class="w-5 h-5"></i> Voice notes
+        </button>
+        <button id="checkin-add-note" class="rounded-xl px-4 py-3 border font-semibold flex items-center gap-2">
+          <i data-lucide="plus" class="w-5 h-5"></i> Add note
+        </button>
+      </div>
+      <ul id="checkin-list" class="mt-4 space-y-3"></ul>
+    </section>
+
+    <!-- Medication Tracker -->
+    <section id="meds" class="rounded-3xl shadow-xl border bg-gradient-to-br from-ocean-50 to-grape-50 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="p-3 rounded-2xl bg-gradient-to-r from-ocean-500 to-grape-600 shadow text-white">
+            <i data-lucide="pill" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold">Medication Tracker</h2>
+            <p class="text-sm text-gray-700">Tap a dose when you take it</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="btn-add-med" class="rounded-xl bg-gradient-to-r from-ocean-500 to-grape-600 text-white px-4 py-2 font-semibold shadow hover:brightness-110"><i data-lucide="plus" class="inline w-4 h-4 mr-1"></i>Add</button>
+          <button id="btn-meds-backup" class="rounded-xl border px-3 py-2 font-semibold">Backup</button>
+          <input id="import-med-file" type="file" accept="application/json" class="hidden" />
+          <button id="btn-meds-restore" class="rounded-xl border px-3 py-2 font-semibold">Restore</button>
+        </div>
+      </div>
+      <div id="med-list" class="space-y-3"></div>
+    </section>
+
+    <!-- Symptom Journal -->
+    <section id="symptoms" class="rounded-3xl shadow-xl border bg-gradient-to-br from-meadow-50 to-peach-50 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="p-3 rounded-2xl bg-gradient-to-r from-meadow-500 to-peach-600 shadow text-white">
+            <i data-lucide="thermometer" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold">Symptom Journal</h2>
+            <p class="text-sm text-gray-700">Track severity and notes</p>
+          </div>
+        </div>
+        <button id="btn-add-symptom" class="rounded-xl bg-gradient-to-r from-meadow-500 to-peach-600 text-white px-4 py-2 font-semibold shadow hover:brightness-110"><i data-lucide="plus" class="inline w-4 h-4 mr-1"></i>Log</button>
+      </div>
+      <div class="bg-white/80 rounded-2xl border p-3 overflow-x-auto">
+        <table class="w-full text-[15px]">
+          <thead>
+            <tr class="border-b text-left">
+              <th class="py-2">Date</th>
+              <th class="py-2">Symptom</th>
+              <th class="py-2">Severity</th>
+              <th class="py-2">Notes</th>
+              <th class="py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="symptom-table"></tbody>
+        </table>
+      </div>
+      <div class="mt-4">
+        <canvas id="symptom-chart" aria-label="Symptom trend chart" role="img" class="w-full h-56"></canvas>
+      </div>
+    </section>
+
+    <!-- Appointments -->
+    <section id="appts" class="rounded-3xl shadow-xl border bg-white p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="p-3 rounded-2xl bg-gradient-to-r from-grape-500 to-peach-600 shadow text-white">
+            <i data-lucide="calendar" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold">Appointments</h2>
+            <p class="text-sm text-gray-700">Never miss a visit</p>
+          </div>
+        </div>
+        <button id="btn-add-appt" class="rounded-xl bg-gradient-to-r from-grape-500 to-peach-600 text-white px-4 py-2 font-semibold shadow hover:brightness-110"><i data-lucide="plus" class="inline w-4 h-4 mr-1"></i>Add</button>
+      </div>
+      <div id="appt-list" class="space-y-3"></div>
+    </section>
+
+    <!-- Resources / Care circle -->
+    <section id="care" class="rounded-3xl shadow-xl border bg-gradient-to-br from-white to-ocean-50 p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="p-3 rounded-2xl bg-gradient-to-r from-ocean-600 to-meadow-600 shadow text-white">
+          <i data-lucide="users" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold">Care Circle</h2>
+          <p class="text-sm text-gray-700">Important contacts & quick actions</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="contact-list"></div>
+      <div class="mt-3 flex gap-2">
+        <button id="btn-add-contact" class="rounded-xl border px-4 py-2 font-semibold"><i data-lucide="plus" class="inline w-4 h-4 mr-1"></i>Add Contact</button>
+        <button id="btn-sos" class="rounded-xl px-4 py-2 font-extrabold text-white bg-red-600 shadow focus:ring-4 focus:ring-red-300"><i data-lucide="alert-triangle" class="inline w-5 h-5 mr-2"></i>Emergency</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t shadow-lg safe-bottom">
+    <div class="max-w-3xl mx-auto px-3">
+      <div class="grid grid-cols-4 gap-1 py-2">
+        <button class="tab-btn active flex flex-col items-center py-2 rounded-xl text-grape-700 bg-grape-100" data-target="home" aria-current="page">
+          <i data-lucide="home" class="w-6 h-6"></i><span class="text-xs mt-1">Home</span>
+        </button>
+        <button class="tab-btn flex flex-col items-center py-2 rounded-xl text-gray-600" data-target="meds">
+          <i data-lucide="pill" class="w-6 h-6"></i><span class="text-xs mt-1">Meds</span>
+        </button>
+        <button class="tab-btn flex flex-col items-center py-2 rounded-xl text-gray-600" data-target="symptoms">
+          <i data-lucide="heart-pulse" class="w-6 h-6"></i><span class="text-xs mt-1">Symptoms</span>
+        </button>
+        <button class="tab-btn flex flex-col items-center py-2 rounded-xl text-gray-600" data-target="appts">
+          <i data-lucide="calendar" class="w-6 h-6"></i><span class="text-xs mt-1">Visits</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Modals (reusable) -->
+  <div id="modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50" data-close="true"></div>
+    <div class="relative max-w-md w-full bg-white rounded-2xl shadow-2xl border">
+      <div class="flex items-center justify-between p-4 border-b">
+        <h3 id="modal-title" class="text-lg font-bold"></h3>
+        <button class="p-2" data-close="true" aria-label="Close modal"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+      <div id="modal-body" class="p-4"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Utilities & Storage ----------
+    const $ = (sel, p=document) => p.querySelector(sel);
+    const $$ = (sel, p=document) => [...p.querySelectorAll(sel)];
+    const store = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+    const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } };
+    const fmtDate = (d=new Date()) => new Date(d).toISOString().split('T')[0];
+    const nowLocal = () => new Date().toLocaleString();
+
+    // ---------- App State ----------
+    let state = load('neuroease', {
+      checkins: [],
+      meds: [
+        { id: 1, name: 'Levodopa/Carbidopa', dose: '100/25 mg', times: ['08:00','13:00','19:00'], lastTaken: {} },
+        { id: 2, name: 'Ropinirole', dose: '2 mg', times: ['21:00'], lastTaken: {} }
+      ],
+      symptoms: [
+        { id: 1, date: fmtDate(), name: 'Tremor', severity: 3, notes: 'Mostly at rest' }
+      ],
+      appts: [
+        { id: 1, date: fmtDate(new Date(Date.now()+86400000)), time: '10:30', clinician: 'Dr. Sarah Johnson', location: 'Neuro Clinic, 3rd Floor' }
+      ],
+      contacts: [
+        { id: 1, label: 'Primary Caregiver', name: 'Ali', phone: '+1 555-0101' },
+        { id: 2, label: 'Neurologist Office', name: 'Clinic Desk', phone: '+1 555-0202' }
+      ],
+      prefs: { largeText: false, highContrast: false }
+    });
+
+    const persist = () => store('neuroease', state);
+
+    // ---------- Accessibility Toggles ----------
+    const applyPrefs = () => {
+      document.documentElement.classList.toggle('text-[18px]', state.prefs.largeText);
+      document.documentElement.style.fontSize = state.prefs.largeText ? '18px' : '';
+      document.body.classList.toggle('contrast-150', state.prefs.highContrast);
+      $('#toggle-text').setAttribute('aria-pressed', state.prefs.largeText);
+      $('#toggle-contrast').setAttribute('aria-pressed', state.prefs.highContrast);
+    };
+
+    // ---------- Modal ----------
+    const modal = $('#modal');
+    const openModal = (title, bodyHTML) => {
+      $('#modal-title').textContent = title;
+      $('#modal-body').innerHTML = bodyHTML;
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+      // Focus first input for easier use
+      const firstInput = $('#modal-body input, #modal-body textarea, #modal-body select');
+      firstInput && firstInput.focus();
+    };
+    const closeModal = () => modal.classList.add('hidden');
+
+    // ---------- Renderers ----------
+    function renderCheckins(){
+      const ul = $('#checkin-list');
+      ul.innerHTML = state.checkins.slice().reverse().map(c=>`
+        <li class="rounded-2xl border p-3 flex items-start gap-3 bg-white">
+          <span class="text-2xl">${c.emoji}</span>
+          <div class="flex-1">
+            <div class="font-semibold">${c.mood} <span class="text-xs text-gray-500">• ${new Date(c.at).toLocaleString()}</span></div>
+            ${c.note ? `<div class="text-sm text-gray-700 mt-1">${c.note}</div>`: ''}
+          </div>
+          <button class="p-2" aria-label="Delete" onclick="deleteCheckin(${c.id})"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+        </li>`).join('');
+    }
+    window.deleteCheckin = id => { state.checkins = state.checkins.filter(x=>x.id!==id); persist(); renderCheckins(); };
+
+    function renderMeds(){
+      const wrap = $('#med-list');
+      wrap.innerHTML = state.meds.map(m=>{
+        const doses = m.times.map(t=>{
+          const taken = m.lastTaken[t] && new Date(m.lastTaken[t]).toDateString() === new Date().toDateString();
+          return `<button class="dose-btn ${taken?'bg-meadow-200 border-meadow-400':'bg-white'} border rounded-xl px-3 py-2 text-sm font-semibold" data-id="${m.id}" data-time="${t}">
+                    <i data-lucide="check-circle2" class="w-4 h-4 inline mr-1"></i>${t}
+                  </button>`
+        }).join(' ');
+        return `<div class="bg-white rounded-2xl border p-4 flex items-start gap-3">
+          <div class="p-3 rounded-xl bg-ocean-100 border border-ocean-200"><i data-lucide="pill" class="w-5 h-5 text-ocean-700"></i></div>
+          <div class="flex-1">
+            <div class="font-bold text-lg">${m.name}</div>
+            <div class="text-sm text-gray-700">Dose: ${m.dose}</div>
+            <div class="mt-2 flex flex-wrap gap-2">${doses}</div>
+            <div class="mt-2 text-xs text-gray-500">Last taken: ${Object.keys(m.lastTaken).length? new Date(Object.values(m.lastTaken).sort().pop()).toLocaleString(): '—'}</div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <button class="rounded-lg border px-3 py-2 text-sm font-semibold" onclick="editMed(${m.id})"><i data-lucide="edit" class="w-4 h-4 inline mr-1"></i>Edit</button>
+            <button class="rounded-lg border px-3 py-2 text-sm font-semibold" onclick="deleteMed(${m.id})"><i data-lucide="trash-2" class="w-4 h-4 inline mr-1"></i>Remove</button>
+          </div>
+        </div>`
+      }).join('');
+      lucide.createIcons();
+      $$('.dose-btn').forEach(b=>b.addEventListener('click', e=>{
+        const id = +b.dataset.id; const t = b.dataset.time;
+        const med = state.meds.find(x=>x.id===id);
+        med.lastTaken[t] = new Date().toISOString();
+        persist(); renderMeds();
+      }))
+    }
+    window.deleteMed = id => { state.meds = state.meds.filter(m=>m.id!==id); persist(); renderMeds(); };
+
+    function renderSymptoms(){
+      const tb = $('#symptom-table');
+      tb.innerHTML = state.symptoms.map(s=>`
+        <tr class="border-b">
+          <td class="py-2">${s.date}</td>
+          <td class="py-2">${s.name}</td>
+          <td class="py-2">
+            <span class="px-2 py-1 rounded text-xs ${s.severity<=2?'bg-green-100 text-green-800': s.severity===3?'bg-yellow-100 text-yellow-800':'bg-red-100 text-red-800'}">${s.severity}/5</span>
+          </td>
+          <td class="py-2">${s.notes||''}</td>
+          <td class="py-2">
+            <button class="rounded-lg border px-2 py-1 text-xs font-semibold" onclick="editSymptom(${s.id})">Edit</button>
+            <button class="rounded-lg border px-2 py-1 text-xs font-semibold" onclick="deleteSymptom(${s.id})">Remove</button>
+          </td>
+        </tr>`).join('');
+      drawSymptomChart();
+    }
+    window.deleteSymptom = id => { state.symptoms = state.symptoms.filter(s=>s.id!==id); persist(); renderSymptoms(); };
+
+    function renderAppts(){
+      const list = $('#appt-list');
+      list.innerHTML = state.appts.map(a=>`
+        <div class="bg-white rounded-2xl border p-4 flex items-start gap-3">
+          <div class="p-3 rounded-xl bg-grape-100 border border-grape-200"><i data-lucide="calendar" class="w-5 h-5 text-grape-700"></i></div>
+          <div class="flex-1">
+            <div class="font-bold">${a.date} • ${a.time}</div>
+            <div class="text-sm text-gray-700">${a.clinician}</div>
+            <div class="text-sm text-gray-600">${a.location||''}</div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <a class="rounded-lg border px-3 py-2 text-sm font-semibold" href="https://www.google.com/maps/search/${encodeURIComponent(a.location||'clinic')}" target="_blank" rel="noreferrer">Map</a>
+            <button class="rounded-lg border px-3 py-2 text-sm font-semibold" onclick="editAppt(${a.id})">Edit</button>
+            <button class="rounded-lg border px-3 py-2 text-sm font-semibold" onclick="deleteAppt(${a.id})">Remove</button>
+          </div>
+        </div>`).join('');
+    }
+    window.deleteAppt = id => { state.appts = state.appts.filter(a=>a.id!==id); persist(); renderAppts(); };
+
+    function renderContacts(){
+      const wrap = $('#contact-list');
+      wrap.innerHTML = state.contacts.map(c=>`
+        <div class="bg-white rounded-2xl border p-4 flex items-start gap-3">
+          <div class="p-3 rounded-xl bg-meadow-100 border border-meadow-200"><i data-lucide="user" class="w-5 h-5 text-meadow-700"></i></div>
+          <div class="flex-1">
+            <div class="font-bold">${c.label}</div>
+            <div class="text-sm">${c.name} • <a class="text-ocean-700 underline" href="tel:${c.phone}">${c.phone}</a></div>
+          </div>
+          <div class="flex gap-2">
+            <button class="rounded-lg border px-3 py-2 text-sm font-semibold" onclick="editContact(${c.id})">Edit</button>
+            <button class="rounded-lg border px-3 py-2 text-sm font-semibold" onclick="deleteContact(${c.id})">Remove</button>
+          </div>
+        </div>`).join('');
+    }
+    window.deleteContact = id => { state.contacts = state.contacts.filter(c=>c.id!==id); persist(); renderContacts(); };
+
+    // ---------- Charts ----------
+    let symChart;
+    function drawSymptomChart(){
+      const ctx = $('#symptom-chart');
+      const byDate = {};
+      state.symptoms.forEach(s=>{ byDate[s.date] = (byDate[s.date]||0) + s.severity; });
+      const labels = Object.keys(byDate).sort();
+      const data = labels.map(k=>byDate[k]);
+      if(symChart) symChart.destroy();
+      symChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Total daily severity', data, fill: false, borderColor: '#7c3aed', tension: .3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+    }
+
+    // ---------- Add/Edit Forms ----------
+    const medForm = (m={}) => `
+      <div class="space-y-3">
+        <label class="block text-sm">Name<input id="med-name" class="mt-1 w-full border rounded-xl px-3 py-2" value="${m.name||''}"/></label>
+        <label class="block text-sm">Dose<input id="med-dose" class="mt-1 w-full border rounded-xl px-3 py-2" value="${m.dose||''}"/></label>
+        <label class="block text-sm">Times (HH:MM, comma-separated)<input id="med-times" class="mt-1 w-full border rounded-xl px-3 py-2" value="${(m.times||[]).join(',')}"/></label>
+        <div class="flex gap-2 pt-2">
+          <button id="save-med" class="flex-1 rounded-xl bg-grape-600 text-white font-semibold px-4 py-3">Save</button>
+          <button class="rounded-xl border px-4 py-3" data-close="true">Cancel</button>
+        </div>
+      </div>`;
+
+    const symptomForm = (s={}) => `
+      <div class="space-y-3">
+        <label class="block text-sm">Date<input id="sym-date" type="date" class="mt-1 w-full border rounded-xl px-3 py-2" value="${s.date||fmtDate()}"/></label>
+        <label class="block text-sm">Symptom<input id="sym-name" class="mt-1 w-full border rounded-xl px-3 py-2" value="${s.name||''}" placeholder="Tremor, stiffness, fatigue"/></label>
+        <label class="block text-sm">Severity (1–5)<input id="sym-sev" type="number" min="1" max="5" class="mt-1 w-full border rounded-xl px-3 py-2" value="${s.severity||3}"/></label>
+        <label class="block text-sm">Notes<textarea id="sym-notes" rows="3" class="mt-1 w-full border rounded-xl px-3 py-2">${s.notes||''}</textarea></label>
+        <div class="flex gap-2 pt-2">
+          <button id="save-sym" class="flex-1 rounded-xl bg-meadow-600 text-white font-semibold px-4 py-3">Save</button>
+          <button class="rounded-xl border px-4 py-3" data-close="true">Cancel</button>
+        </div>
+      </div>`;
+
+    const apptForm = (a={}) => `
+      <div class="space-y-3">
+        <label class="block text-sm">Date<input id="appt-date" type="date" class="mt-1 w-full border rounded-xl px-3 py-2" value="${a.date||fmtDate()}"/></label>
+        <label class="block text-sm">Time<input id="appt-time" type="time" class="mt-1 w-full border rounded-xl px-3 py-2" value="${a.time||'10:00'}"/></label>
+        <label class="block text-sm">Clinician<input id="appt-doc" class="mt-1 w-full border rounded-xl px-3 py-2" value="${a.clinician||''}"/></label>
+        <label class="block text-sm">Location<input id="appt-loc" class="mt-1 w-full border rounded-xl px-3 py-2" value="${a.location||''}"/></label>
+        <div class="flex gap-2 pt-2">
+          <button id="save-appt" class="flex-1 rounded-xl bg-grape-600 text-white font-semibold px-4 py-3">Save</button>
+          <button class="rounded-xl border px-4 py-3" data-close="true">Cancel</button>
+        </div>
+      </div>`;
+
+    const contactForm = (c={}) => `
+      <div class="space-y-3">
+        <label class="block text-sm">Label<input id="c-label" class="mt-1 w-full border rounded-xl px-3 py-2" value="${c.label||''}"/></label>
+        <label class="block text-sm">Name<input id="c-name" class="mt-1 w-full border rounded-xl px-3 py-2" value="${c.name||''}"/></label>
+        <label class="block text-sm">Phone<input id="c-phone" class="mt-1 w-full border rounded-xl px-3 py-2" value="${c.phone||''}"/></label>
+        <div class="flex gap-2 pt-2">
+          <button id="save-contact" class="flex-1 rounded-xl bg-ocean-600 text-white font-semibold px-4 py-3">Save</button>
+          <button class="rounded-xl border px-4 py-3" data-close="true">Cancel</button>
+        </div>
+      </div>`;
+
+    // ----- Edit hooks
+    window.editMed = id => {
+      const med = state.meds.find(m=>m.id===id) || {};
+      openModal(id? 'Edit Medication':'Add Medication', medForm(med));
+      $('#save-med').onclick = () => {
+        const name=$('#med-name').value.trim(); const dose=$('#med-dose').value.trim(); const times=$('#med-times').value.split(',').map(t=>t.trim()).filter(Boolean);
+        if(!name || !dose || !times.length) return alert('Please fill all fields.');
+        if(id){ Object.assign(med,{name,dose,times}); } else { state.meds.push({ id: Date.now(), name, dose, times, lastTaken:{} }); }
+        persist(); renderMeds(); closeModal();
+      }
+    }
+
+    window.editSymptom = id => {
+      const sym = state.symptoms.find(s=>s.id===id) || {};
+      openModal(id? 'Edit Symptom':'Log Symptom', symptomForm(sym));
+      $('#save-sym').onclick = () => {
+        const o = { date: $('#sym-date').value, name: $('#sym-name').value.trim(), severity: Math.max(1, Math.min(5, +$('#sym-sev').value||3)), notes: $('#sym-notes').value };
+        if(!o.name) return alert('Please enter symptom.');
+        if(id){ Object.assign(sym, o); } else { state.symptoms.push({ id: Date.now(), ...o }); }
+        persist(); renderSymptoms(); closeModal();
+      }
+    }
+
+    window.editAppt = id => {
+      const a = state.appts.find(x=>x.id===id) || {};
+      openModal(id? 'Edit Appointment':'Add Appointment', apptForm(a));
+      $('#save-appt').onclick = () => {
+        const o = { date: $('#appt-date').value, time: $('#appt-time').value, clinician: $('#appt-doc').value.trim(), location: $('#appt-loc').value.trim() };
+        if(!o.date || !o.time || !o.clinician) return alert('Please complete date, time, clinician.');
+        if(id){ Object.assign(a, o); } else { state.appts.push({ id: Date.now(), ...o }); }
+        persist(); renderAppts(); closeModal();
+      }
+    }
+
+    window.editContact = id => {
+      const c = state.contacts.find(x=>x.id===id) || {};
+      openModal(id? 'Edit Contact':'Add Contact', contactForm(c));
+      $('#save-contact').onclick = () => {
+        const o = { label: $('#c-label').value.trim(), name: $('#c-name').value.trim(), phone: $('#c-phone').value.trim() };
+        if(!o.label || !o.phone) return alert('Please enter label and phone.');
+        if(id){ Object.assign(c, o); } else { state.contacts.push({ id: Date.now(), ...o }); }
+        persist(); renderContacts(); closeModal();
+      }
+    }
+
+    // ---------- Backup / Restore (JSON) ----------
+    $('#btn-meds-backup')?.addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `neuroease-backup-${fmtDate()}.json`; a.click();
+    });
+    $('#btn-meds-restore')?.addEventListener('click', ()=> $('#import-med-file').click());
+    $('#import-med-file')?.addEventListener('change', (e)=>{
+      const file = e.target.files?.[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => { try { const data = JSON.parse(reader.result); if(data && data.meds) { state = data; persist(); hydrate(); } } catch { alert('Invalid backup file.'); } };
+      reader.readAsText(file);
+    });
+
+    // ---------- Daily Check‑in actions ----------
+    $$('.feel-btn').forEach(btn=>btn.addEventListener('click',()=>{
+      const mood = btn.dataset.feel; const map={good:'Good',ok:'Okay',tired:'Tired',bad:'Unwell'}; const em={good:'😊',ok:'🙂',tired:'🥱',bad:'😟'};
+      state.checkins.push({ id: Date.now(), mood: map[mood], emoji: em[mood], at: new Date().toISOString(), note: '' });
+      persist(); renderCheckins();
+    }));
+    $('#checkin-add-note').addEventListener('click',()=>{
+      openModal('Add note', `<textarea id="note-text" rows="4" class="w-full border rounded-2xl p-3" placeholder="Write something..."></textarea>
+        <div class='mt-3 flex gap-2'><button id='save-note' class='flex-1 rounded-xl bg-gray-900 text-white px-4 py-3 font-semibold'>Save</button><button class='rounded-xl border px-4 py-3' data-close='true'>Cancel</button></div>`);
+      $('#save-note').onclick = ()=>{ const t = $('#note-text').value.trim(); if(!t) return closeModal(); state.checkins.push({ id: Date.now(), mood:'Note', emoji:'📝', at:new Date().toISOString(), note:t }); persist(); renderCheckins(); closeModal(); };
+    });
+
+    // Optional Voice input (browser dependent)
+    let recognition;
+    $('#checkin-voice').addEventListener('click', ()=>{
+      try{
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR) return alert('Voice input is not supported on this browser.');
+        recognition = new SR(); recognition.lang = 'en-US'; recognition.onresult = (e)=>{
+          const t = [...e.results].map(r=>r[0].transcript).join(' ');
+          state.checkins.push({ id: Date.now(), mood:'Voice', emoji:'🎙️', at:new Date().toISOString(), note:t }); persist(); renderCheckins();
+        }; recognition.start();
+      }catch(err){ alert('Could not start voice input.'); }
+    });
+
+    // ---------- SOS ----------
+    $('#btn-sos').addEventListener('click', ()=>{
+      if(confirm('Call your primary caregiver now?')){ const p = state.contacts[0]?.phone || ''; if(p) window.location.href = `tel:${p}`; }
+      try { navigator.vibrate && navigator.vibrate([200,100,200,100,200]); } catch {}
+    });
+
+    // ---------- Tabs ----------
+    $$('.tab-btn').forEach(b=>b.addEventListener('click', ()=>{
+      $$('.tab-btn').forEach(x=>{ x.classList.remove('active','text-grape-700','bg-grape-100'); x.classList.add('text-gray-600'); x.removeAttribute('aria-current'); });
+      b.classList.add('active','text-grape-700','bg-grape-100'); b.setAttribute('aria-current','page');
+      const t = b.dataset.target; ['home','meds','symptoms','appts'].forEach(id=>$('#'+id).classList.toggle('hidden', id!==t));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }))
+
+    // ---------- Pref Toggles ----------
+    $('#toggle-text').addEventListener('click', ()=>{ state.prefs.largeText=!state.prefs.largeText; persist(); applyPrefs(); });
+    $('#toggle-contrast').addEventListener('click', ()=>{ state.prefs.highContrast=!state.prefs.highContrast; persist(); applyPrefs(); });
+
+    // ---------- Add Buttons ----------
+    $('#btn-add-med').addEventListener('click', ()=> editMed(0));
+    $('#btn-add-symptom').addEventListener('click', ()=> editSymptom(0));
+    $('#btn-add-appt').addEventListener('click', ()=> editAppt(0));
+    $('#btn-add-contact').addEventListener('click', ()=> editContact(0));
+
+    // ---------- Modal close ----------
+    modal.addEventListener('click', (e)=>{ if(e.target.dataset.close) closeModal(); });
+
+    // ---------- Hydrate UI ----------
+    function hydrate(){
+      applyPrefs();
+      renderCheckins();
+      renderMeds();
+      renderSymptoms();
+      renderAppts();
+      renderContacts();
+      lucide.createIcons();
+      // show initial section
+      ['home','meds','symptoms','appts'].forEach((id,i)=>$('#'+id).classList.toggle('hidden', i!==0));
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', hydrate);
+  </script>
+</body>
+</html>
